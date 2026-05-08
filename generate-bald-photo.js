@@ -1,7 +1,8 @@
+import { InferenceClient } from '@huggingface/inference';
+
 const DEFAULT_TIMEOUT_MS = 120000;
-const DEFAULT_HF_MODEL = 'timbrooks/instruct-pix2pix';
+const DEFAULT_HF_MODEL = 'black-forest-labs/FLUX.2-dev';
 const DEFAULT_OUTPUT_SIZE = '1024x1316';
-const HF_MODEL_BASE_URL = 'https://api-inference.huggingface.co/models';
 const DEFAULT_PROMPT =
   'Keep the person’s exact facial identity, facial features, expression, skin tone, pose, and lighting. Remove only the hair and create a natural smooth bald head. Do not change the face. Do not change the eyes, nose, lips, jaw, or expression. Keep realistic portrait photo quality. Convert to a clean 7:9 yearbook ID photo style.';
 const DEFAULT_NEGATIVE_PROMPT =
@@ -34,6 +35,17 @@ function dataUrlToBinary(dataUrl) {
   return Buffer.from(base64, 'base64');
 }
 
+function bufferToBlob(buffer, type = 'image/jpeg') {
+  return new Blob([buffer], { type });
+}
+
+async function blobToDataUrl(blob) {
+  const arrayBuffer = await blob.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString('base64');
+  const mimeType = blob.type || 'image/png';
+  return `data:${mimeType};base64,${base64}`;
+}
+
 function parseJsonText(text) {
   if (!text) {
     return {};
@@ -59,7 +71,7 @@ function resolveHuggingFaceModel() {
 async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
   const token = process.env.HF_TOKEN;
   const model = resolveHuggingFaceModel();
-  const provider = process.env.HF_PROVIDER;
+  const provider = process.env.HF_PROVIDER || 'fal-ai';
 
   if (!token) {
     console.error('Missing HF_TOKEN', {
@@ -68,10 +80,9 @@ async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
     return null;
   }
 
-  const endpoint = `${HF_MODEL_BASE_URL}/${model}`;
   const imageBytes = dataUrlToBinary(image);
   const requestPayload = {
-    inputs: imageBytes.toString('base64'),
+    inputs: '<jpeg bytes>',
     parameters: {
       prompt,
       negative_prompt: negativePrompt,
@@ -83,77 +94,82 @@ async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
     }
   };
   const requestPayloadText = JSON.stringify(requestPayload);
-
-  const hfResponse = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(provider ? { 'X-HF-Inference-Provider': provider } : {})
-    },
-    body: requestPayloadText,
-    signal
-  });
-
-  const contentType = hfResponse.headers.get('content-type') || '';
   const logBase = {
     selectedModel: model,
     HF_IMAGE_MODEL: model,
+    provider,
     requestPayloadSize: requestPayloadText.length,
     uploadedImageBytes: imageBytes.byteLength,
-    responseStatus: hfResponse.status,
-    responseStatusText: hfResponse.statusText,
-    'response.status': hfResponse.status,
-    'response.statusText': hfResponse.statusText,
-    'response status': hfResponse.status,
-    contentType,
+    responseStatus: '',
+    responseStatusText: '',
+    'response.status': '',
+    'response.statusText': '',
+    'response status': '',
     responseText: '',
     'response text': '',
     'response body text': ''
   };
 
-  if (contentType.startsWith('image/')) {
-    const mimeType = contentType.split(';')[0];
-    const arrayBuffer = await hfResponse.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
+  try {
+    const client = new InferenceClient(token);
+    const output = await client.imageToImage(
+      {
+        model,
+        provider,
+        inputs: bufferToBlob(imageBytes),
+        parameters: {
+          prompt,
+          negative_prompt: negativePrompt,
+          guidance_scale: 7,
+          num_inference_steps: 30,
+          target_size: {
+            width: 1024,
+            height: 1316
+          }
+        }
+      },
+      { signal }
+    );
 
     return {
-      ok: hfResponse.ok,
-      status: hfResponse.status,
+      ok: true,
+      status: 200,
       payload: {
-        imageDataUrl: `data:${mimeType};base64,${base64}`,
+        imageDataUrl: await blobToDataUrl(output),
+        provider: 'huggingface',
+        model
+      }
+    };
+  } catch (error) {
+    const status = error.status || error.response?.status || '';
+    const statusText = error.statusText || error.response?.statusText || '';
+    const responseText =
+      error.responseBody ||
+      error.response?.body ||
+      error.message ||
+      String(error);
+    console.error('Hugging Face image generation failed', {
+      ...logBase,
+      responseStatus: status,
+      responseStatusText: statusText,
+      'response.status': status,
+      'response.statusText': statusText,
+      'response status': status,
+      responseText: String(responseText).slice(0, 4000),
+      'response text': String(responseText).slice(0, 4000),
+      'response body text': String(responseText).slice(0, 4000)
+    });
+
+    return {
+      ok: false,
+      status: status || 502,
+      payload: {
+        error: 'Hugging Face image-to-image request failed.',
         provider: 'huggingface',
         model
       }
     };
   }
-
-  const responseText = await hfResponse.text();
-  const data = parseJsonText(responseText);
-  const imageUrl = findImageUrl(data);
-
-  if (!hfResponse.ok || !imageUrl) {
-    console.error('Hugging Face image generation failed', {
-      ...logBase,
-      provider,
-      responseText: responseText.slice(0, 4000),
-      'response text': responseText.slice(0, 4000),
-      'response body text': responseText.slice(0, 4000)
-    });
-  }
-
-  return {
-    ok: hfResponse.ok && Boolean(imageUrl),
-    status: hfResponse.ok ? 502 : hfResponse.status,
-    payload: imageUrl
-      ? { imageUrl, provider: 'huggingface', model }
-      : {
-          error:
-            data.error ||
-            data.message ||
-            'Hugging Face did not return an image. Try another HF_IMAGE_MODEL.'
-        }
-  };
 }
 
 export default async function handler(request, response) {
@@ -217,7 +233,12 @@ export default async function handler(request, response) {
         status: aiResult.status,
         payload: aiResult.payload
       });
-      response.status(aiResult.status).json(aiResult.payload);
+      response.status(200).json({
+        imageDataUrl: image,
+        provider: 'demo-fallback',
+        model: aiResult.payload?.model || resolveHuggingFaceModel(),
+        demo: true
+      });
       return;
     }
 
