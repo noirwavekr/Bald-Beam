@@ -186,7 +186,7 @@ export default async function handler(request, response) {
 
     if (!aiResult) {
       response.status(501).json({
-        error: 'Add HF_TOKEN for the free Hugging Face tier or BALD_BEAM_AI_ENDPOINT for a custom provider.',
+        error: 'Missing server-side HF_TOKEN.',
         prompt,
         size,
         style

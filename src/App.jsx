@@ -30,7 +30,7 @@ const translations = {
     empty: '얼굴이 잘 보이는 사진을 넣어주세요',
     original: '원본',
     aiResult: 'AI 결과',
-    aiRequired: '무료 AI 키를 연결해주세요',
+    failed: 'AI 생성에 실패했어요. 잠시 후 다시 시도해주세요.',
     styleNote: 'US YEARBOOK / 7:9'
   },
   en: {
@@ -46,7 +46,7 @@ const translations = {
     empty: 'Add a clear face photo',
     original: 'Original',
     aiResult: 'AI Result',
-    aiRequired: 'Connect a free AI key',
+    failed: 'AI generation failed. Please try again soon.',
     styleNote: 'US YEARBOOK / 7:9'
   }
 };
@@ -213,7 +213,7 @@ export default function App() {
       setProgress(100);
       setNotice(t.complete);
     } catch (error) {
-      setNotice(error.message.includes('API') || error.message.includes('HF_TOKEN') ? t.aiRequired : error.message);
+      setNotice(t.failed);
       setProgress(0);
     } finally {
       window.clearInterval(interval);
@@ -247,15 +247,15 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] bg-[#f6efd9] text-beam-ink sm:flex sm:items-center sm:justify-center">
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-beam-paper px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+18px)] shadow-2xl sm:min-h-[820px] sm:rounded-[28px] sm:border-4 sm:border-beam-ink">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(circle_at_80%_18%,rgba(255,182,163,0.55),transparent_30%),radial-gradient(circle_at_18%_8%,rgba(155,220,248,0.6),transparent_32%),linear-gradient(180deg,#dff5c6_0%,#fffdf2_86%)]" />
-        <div className="pointer-events-none absolute -left-10 top-36 h-32 w-32 rounded-full bg-beam-meadow/70" />
-        <div className="pointer-events-none absolute -right-12 bottom-32 h-40 w-40 rounded-full bg-beam-sky/35" />
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-beam-paper px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-[calc(env(safe-area-inset-top)+12px)] shadow-2xl sm:min-h-[760px] sm:rounded-[28px] sm:border-[3px] sm:border-beam-ink">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_82%_18%,rgba(255,182,163,0.42),transparent_28%),radial-gradient(circle_at_16%_4%,rgba(155,220,248,0.55),transparent_28%),linear-gradient(180deg,#e4f7c8_0%,#fffdf2_84%)]" />
+        <div className="pointer-events-none absolute -left-14 top-28 h-28 w-28 rounded-full bg-beam-meadow/55" />
+        <div className="pointer-events-none absolute -right-14 bottom-28 h-32 w-32 rounded-full bg-beam-sky/30" />
 
-        <header className="relative z-10 flex items-start justify-between gap-3">
-          <div>
+        <header className="relative z-10 flex items-start justify-between gap-2">
+          <div className="min-w-0">
             <HandwrittenLogo />
-            <p className="mt-3 max-w-[240px] text-[15px] font-black leading-snug text-beam-ink/75">
+            <p className="mt-1 max-w-[230px] text-[12px] font-black leading-snug text-beam-ink/65">
               {t.subtitle}
             </p>
           </div>
@@ -263,15 +263,15 @@ export default function App() {
           <button
             type="button"
             onClick={() => setLang((value) => (value === 'ko' ? 'en' : 'ko'))}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-lg border-2 border-beam-ink bg-white px-3 text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border-2 border-beam-ink bg-white px-3 text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
           >
             <Globe2 size={17} strokeWidth={3} />
             {t.lang}
           </button>
         </header>
 
-        <main className="relative z-10 mt-7 flex flex-1 flex-col">
-          <section className="relative aspect-[7/9] w-full overflow-hidden rounded-lg border-4 border-beam-ink bg-beam-cream shadow-beam">
+        <main className="relative z-10 mt-4 flex min-h-0 flex-1 flex-col">
+          <section className="relative mx-auto aspect-[7/9] h-[min(46dvh,390px)] min-h-[292px] max-h-[390px] w-auto max-w-full overflow-hidden rounded-lg border-[3px] border-beam-ink bg-beam-cream shadow-beam">
             {currentImage ? (
               <>
                 <img
@@ -279,19 +279,19 @@ export default function App() {
                   alt="Bald Beam preview"
                   className={`h-full w-full object-cover transition duration-500 ${loading ? 'scale-105 opacity-50 grayscale' : ''}`}
                 />
-                <div className="absolute left-3 top-3 rounded-lg border-2 border-beam-ink bg-white px-3 py-2 text-xs font-black text-beam-ink shadow-crisp">
+                <div className="absolute left-2 top-2 rounded-md border-2 border-beam-ink bg-white px-2.5 py-1.5 text-[11px] font-black text-beam-ink shadow-crisp">
                   {result ? t.aiResult : t.original}
                 </div>
-                <div className="absolute bottom-3 right-3 rounded-lg border-2 border-beam-ink bg-beam-butter px-3 py-2 text-[10px] font-black text-beam-ink shadow-crisp">
+                <div className="absolute bottom-2 right-2 rounded-md border-2 border-beam-ink bg-beam-butter px-2.5 py-1.5 text-[9px] font-black text-beam-ink shadow-crisp">
                   {t.styleNote}
                 </div>
               </>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-5 bg-[linear-gradient(135deg,#dff5c6_0%,#fff8dc_50%,#d7f0ff_100%)] px-8 text-center">
-                <div className="grid h-24 w-24 place-items-center rounded-lg border-4 border-beam-ink bg-beam-butter text-beam-ink shadow-crisp">
-                  <Camera size={42} strokeWidth={3} />
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#dff5c6_0%,#fff8dc_50%,#d7f0ff_100%)] px-7 text-center">
+                <div className="grid h-16 w-16 place-items-center rounded-lg border-[3px] border-beam-ink bg-beam-butter text-beam-ink shadow-crisp">
+                  <Camera size={30} strokeWidth={3} />
                 </div>
-                <p className="text-balance text-lg font-black leading-snug text-beam-ink">
+                <p className="text-balance text-sm font-black leading-snug text-beam-ink">
                   {t.empty}
                 </p>
               </div>
@@ -299,32 +299,32 @@ export default function App() {
 
             {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-beam-cream/[0.78] px-7 text-center backdrop-blur-[3px]">
-                <RefreshCw className="animate-spin text-beam-leaf" size={48} strokeWidth={3} />
-                <p className="mt-4 text-xl font-black text-beam-ink">{t.processing}</p>
-                <div className="mt-5 h-3 w-full overflow-hidden rounded-full border-2 border-beam-ink bg-white">
+                <RefreshCw className="animate-spin text-beam-leaf" size={38} strokeWidth={3} />
+                <p className="mt-3 text-base font-black text-beam-ink">{t.processing}</p>
+                <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full border-2 border-beam-ink bg-white">
                   <div
                     className="h-full rounded-full bg-beam-leaf transition-all duration-150"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="mt-3 text-sm font-black text-beam-ink">
+                <p className="mt-2 text-xs font-black text-beam-ink">
                   {progressLabels[lang][activeStep]}
                 </p>
               </div>
             )}
 
             {notice && !loading && (
-              <div className="absolute bottom-3 left-3 max-w-[56%] rounded-lg border-2 border-beam-ink bg-beam-mint px-3 py-2 text-xs font-black leading-snug text-beam-ink shadow-crisp">
+              <div className="absolute bottom-2 left-2 max-w-[62%] rounded-md border-2 border-beam-ink bg-beam-mint px-2.5 py-1.5 text-[11px] font-black leading-snug text-beam-ink shadow-crisp">
                 {notice}
               </div>
             )}
           </section>
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-1.5">
             {progressLabels[lang].map((label, index) => (
               <div
                 key={label}
-                className={`rounded-lg border-2 px-2 py-2 text-center text-[11px] font-black leading-tight ${
+                className={`rounded-md border-2 px-1.5 py-1.5 text-center text-[10px] font-black leading-tight ${
                   progress > index * 34
                     ? 'border-beam-ink bg-beam-meadow text-beam-ink shadow-soft'
                     : 'border-beam-ink/25 bg-white/70 text-beam-ink/45'
@@ -335,23 +335,23 @@ export default function App() {
             ))}
           </div>
 
-          <div className="mt-auto pt-5">
+          <div className="mt-auto pt-3">
             {!image ? (
-              <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex h-[60px] w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-white text-lg font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <Camera size={22} strokeWidth={3} />
+                  <Camera size={18} strokeWidth={3} />
                   {t.takePhoto}
                 </button>
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="flex h-14 min-h-[56px] w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-beam-sky text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-sky text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <ImagePlus size={21} strokeWidth={3} />
+                  <ImagePlus size={18} strokeWidth={3} />
                   {t.uploadPhoto}
                 </button>
               </div>
@@ -360,17 +360,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={retry}
-                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <RefreshCw size={19} strokeWidth={3} />
+                  <RefreshCw size={17} strokeWidth={3} />
                   {t.retry}
                 </button>
                 <button
                   type="button"
                   onClick={downloadResult}
-                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-leaf text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-leaf text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <Download size={19} strokeWidth={3} />
+                  <Download size={17} strokeWidth={3} />
                   {t.download}
                 </button>
               </div>
@@ -379,11 +379,11 @@ export default function App() {
                 type="button"
                 onClick={applyBaldBeam}
                 disabled={loading}
-                className="beam-button flex h-16 w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-beam-butter text-lg font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70"
+                className="beam-button flex h-[54px] w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-butter text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70"
               >
-                <Zap size={22} fill="currentColor" strokeWidth={3} />
+                <Zap size={19} fill="currentColor" strokeWidth={3} />
                 {t.transform}
-                <Sparkles size={20} strokeWidth={3} />
+                <Sparkles size={18} strokeWidth={3} />
               </button>
             )}
           </div>
