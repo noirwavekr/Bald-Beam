@@ -1,17 +1,15 @@
 const DEFAULT_TIMEOUT_MS = 120000;
-const DEFAULT_HF_MODEL = 'black-forest-labs/FLUX.1-Kontext-dev';
+const DEFAULT_HF_MODEL = 'timbrooks/instruct-pix2pix';
 const DEFAULT_OUTPUT_SIZE = '1024x1316';
-const HF_IMAGE_TO_IMAGE_BASE_URL = 'https://api-inference.huggingface.co/models';
-const DEFAULT_PROMPT = [
-  'Create a photorealistic AI-edited portrait from the uploaded person photo.',
-  'Realistic completely bald head, preserve the person identity, apparent age, face shape, skin tone, expression, and camera angle.',
-  'American teen-movie yearbook inspired ID portrait, blue mottled studio backdrop.',
-  'Clean high-teen yearbook styling, collared shirt, school tie or varsity cardigan.',
-  'Portrait crop for ID photo, vertical 7:9 ratio, centered face and shoulders, direct camera gaze, realistic studio lighting.',
-  'No cartoon overlay, no illustrated beam, no fake sticker, no text, no watermark, no extra people, no hat, no wig, no visible hair.'
-].join(' ');
+const HF_MODEL_BASE_URL = 'https://api-inference.huggingface.co/models';
+const DEFAULT_PROMPT =
+  'Keep the person’s exact facial identity, facial features, expression, skin tone, pose, and lighting. Remove only the hair and create a natural smooth bald head. Do not change the face. Do not change the eyes, nose, lips, jaw, or expression. Keep realistic portrait photo quality. Convert to a clean 7:9 yearbook ID photo style.';
 const DEFAULT_NEGATIVE_PROMPT =
-  'cartoon, illustration, anime, yellow beam, head sticker, fake shine overlay, original hair, wig, hat, cap, extra person, text, watermark';
+  'changed face, different person, distorted face, extra eyes, deformed head, bad anatomy, cartoon, anime, low quality, blurry';
+const TEXT_TO_IMAGE_MODELS = new Set([
+  'stabilityai/stable-diffusion-2-1',
+  'black-forest-labs/FLUX.1-Kontext-dev'
+]);
 
 function findImageUrl(data) {
   if (!data || typeof data !== 'object') {
@@ -30,9 +28,10 @@ function findImageUrl(data) {
   );
 }
 
-function dataUrlToBase64(dataUrl) {
+function dataUrlToBinary(dataUrl) {
   const value = String(dataUrl || '');
-  return value.includes(',') ? value.split(',')[1] : value;
+  const base64 = value.includes(',') ? value.split(',')[1] : value;
+  return Buffer.from(base64, 'base64');
 }
 
 function parseJsonText(text) {
@@ -47,20 +46,19 @@ function parseJsonText(text) {
   }
 }
 
-function parseTargetSize(size) {
-  const [width, height] = String(size || '1024x1316')
-    .split('x')
-    .map((value) => Number.parseInt(value, 10));
+function resolveHuggingFaceModel() {
+  const configuredModel = process.env.HF_IMAGE_MODEL;
 
-  return {
-    width: Number.isFinite(width) ? width : 1024,
-    height: Number.isFinite(height) ? height : 1316
-  };
+  if (!configuredModel || TEXT_TO_IMAGE_MODELS.has(configuredModel)) {
+    return DEFAULT_HF_MODEL;
+  }
+
+  return configuredModel;
 }
 
-async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) {
+async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
   const token = process.env.HF_TOKEN;
-  const model = process.env.HF_IMAGE_MODEL || DEFAULT_HF_MODEL;
+  const model = resolveHuggingFaceModel();
   const provider = process.env.HF_PROVIDER;
 
   if (!token) {
@@ -70,8 +68,21 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
     return null;
   }
 
-  const targetSize = parseTargetSize(size);
-  const endpoint = `${HF_IMAGE_TO_IMAGE_BASE_URL}/${model}`;
+  const endpoint = `${HF_MODEL_BASE_URL}/${model}`;
+  const imageBytes = dataUrlToBinary(image);
+  const requestPayload = {
+    inputs: imageBytes.toString('base64'),
+    parameters: {
+      prompt,
+      negative_prompt: negativePrompt,
+      guidance_scale: 7,
+      num_inference_steps: 30
+    },
+    options: {
+      wait_for_model: true
+    }
+  };
+  const requestPayloadText = JSON.stringify(requestPayload);
 
   const hfResponse = await fetch(endpoint, {
     method: 'POST',
@@ -80,28 +91,24 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
       'Content-Type': 'application/json',
       ...(provider ? { 'X-HF-Inference-Provider': provider } : {})
     },
-    body: JSON.stringify({
-      inputs: dataUrlToBase64(image),
-      parameters: {
-        prompt,
-        negative_prompt: negativePrompt,
-        guidance_scale: 7,
-        num_inference_steps: 28,
-        target_size: targetSize
-      },
-      options: {
-        wait_for_model: true
-      }
-    }),
+    body: requestPayloadText,
     signal
   });
 
   const contentType = hfResponse.headers.get('content-type') || '';
   const logBase = {
+    selectedModel: model,
     HF_IMAGE_MODEL: model,
+    requestPayloadSize: requestPayloadText.length,
+    uploadedImageBytes: imageBytes.byteLength,
+    responseStatus: hfResponse.status,
+    responseStatusText: hfResponse.statusText,
     'response.status': hfResponse.status,
     'response.statusText': hfResponse.statusText,
+    'response status': hfResponse.status,
     contentType,
+    responseText: '',
+    'response text': '',
     'response body text': ''
   };
 
@@ -129,6 +136,8 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
     console.error('Hugging Face image generation failed', {
       ...logBase,
       provider,
+      responseText: responseText.slice(0, 4000),
+      'response text': responseText.slice(0, 4000),
       'response body text': responseText.slice(0, 4000)
     });
   }
@@ -169,7 +178,7 @@ export default async function handler(request, response) {
   }
 
   if (!process.env.HF_TOKEN) {
-    const model = process.env.HF_IMAGE_MODEL || DEFAULT_HF_MODEL;
+    const model = resolveHuggingFaceModel();
     console.error('Missing HF_TOKEN', {
       HF_IMAGE_MODEL: model
     });

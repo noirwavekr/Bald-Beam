@@ -80,7 +80,7 @@ function resizeImageFile(file) {
       const img = new Image();
 
       img.onload = () => {
-        const maxSide = 960;
+        const maxSide = 768;
         const ratio = Math.min(maxSide / img.width, maxSide / img.height, 1);
         const width = Math.round(img.width * ratio);
         const height = Math.round(img.height * ratio);
@@ -95,7 +95,7 @@ function resizeImageFile(file) {
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.84));
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
 
       img.onerror = () => resolve(src);
