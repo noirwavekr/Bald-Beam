@@ -30,7 +30,7 @@ const translations = {
     empty: '얼굴이 잘 보이는 사진을 넣어주세요',
     original: '원본',
     aiResult: 'AI 결과',
-    aiRequired: 'AI 생성 API 연결이 필요해요',
+    aiRequired: '무료 AI 키를 연결해주세요',
     styleNote: 'US YEARBOOK / 7:9'
   },
   en: {
@@ -46,7 +46,7 @@ const translations = {
     empty: 'Add a clear face photo',
     original: 'Original',
     aiResult: 'AI Result',
-    aiRequired: 'Connect an AI generation API',
+    aiRequired: 'Connect a free AI key',
     styleNote: 'US YEARBOOK / 7:9'
   }
 };
@@ -60,13 +60,11 @@ function HandwrittenLogo() {
   return (
     <div className="hand-logo-wrap" aria-label="대머리빔">
       <div className="hand-logo" aria-hidden="true">
-        {'대머리빔'.split('').map((letter) => (
-          <span key={letter}>{letter}</span>
-        ))}
+        <span>대머리빔</span>
       </div>
       <svg className="hand-logo-doodle" viewBox="0 0 170 34" aria-hidden="true">
-        <path d="M9 22 C39 35, 92 27, 160 24" />
-        <path d="M126 5 L135 15 L148 7" />
+        <path d="M9 20 C43 31, 96 27, 161 18" />
+        <path d="M134 10 C141 2, 153 4, 158 13 C149 17, 140 17, 134 10" />
       </svg>
     </div>
   );
@@ -215,7 +213,7 @@ export default function App() {
       setProgress(100);
       setNotice(t.complete);
     } catch (error) {
-      setNotice(error.message.includes('API') ? t.aiRequired : error.message);
+      setNotice(error.message.includes('API') || error.message.includes('HF_TOKEN') ? t.aiRequired : error.message);
       setProgress(0);
     } finally {
       window.clearInterval(interval);
@@ -248,14 +246,16 @@ export default function App() {
   const activeStep = Math.min(Math.floor(progress / 34), 2);
 
   return (
-    <div className="min-h-[100dvh] bg-[#f3efe7] text-white sm:flex sm:items-center sm:justify-center">
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-beam-black px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+18px)] shadow-2xl sm:min-h-[820px] sm:rounded-[28px] sm:border-4 sm:border-beam-black">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_78%_16%,rgba(255,107,168,0.34),transparent_28%),radial-gradient(circle_at_20%_18%,rgba(98,242,200,0.22),transparent_26%)]" />
+    <div className="min-h-[100dvh] bg-[#f6efd9] text-beam-ink sm:flex sm:items-center sm:justify-center">
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-beam-paper px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+18px)] shadow-2xl sm:min-h-[820px] sm:rounded-[28px] sm:border-4 sm:border-beam-ink">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(circle_at_80%_18%,rgba(255,182,163,0.55),transparent_30%),radial-gradient(circle_at_18%_8%,rgba(155,220,248,0.6),transparent_32%),linear-gradient(180deg,#dff5c6_0%,#fffdf2_86%)]" />
+        <div className="pointer-events-none absolute -left-10 top-36 h-32 w-32 rounded-full bg-beam-meadow/70" />
+        <div className="pointer-events-none absolute -right-12 bottom-32 h-40 w-40 rounded-full bg-beam-sky/35" />
 
         <header className="relative z-10 flex items-start justify-between gap-3">
           <div>
             <HandwrittenLogo />
-            <p className="mt-3 max-w-[220px] text-sm font-bold leading-snug text-white/[0.72]">
+            <p className="mt-3 max-w-[240px] text-[15px] font-black leading-snug text-beam-ink/75">
               {t.subtitle}
             </p>
           </div>
@@ -263,7 +263,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setLang((value) => (value === 'ko' ? 'en' : 'ko'))}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-lg border-2 border-white bg-white px-3 text-sm font-black text-beam-black shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+            className="flex h-11 shrink-0 items-center gap-2 rounded-lg border-2 border-beam-ink bg-white px-3 text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
           >
             <Globe2 size={17} strokeWidth={3} />
             {t.lang}
@@ -271,7 +271,7 @@ export default function App() {
         </header>
 
         <main className="relative z-10 mt-7 flex flex-1 flex-col">
-          <section className="relative aspect-[7/9] w-full overflow-hidden rounded-lg border-4 border-white bg-zinc-950 shadow-beam">
+          <section className="relative aspect-[7/9] w-full overflow-hidden rounded-lg border-4 border-beam-ink bg-beam-cream shadow-beam">
             {currentImage ? (
               <>
                 <img
@@ -279,42 +279,42 @@ export default function App() {
                   alt="Bald Beam preview"
                   className={`h-full w-full object-cover transition duration-500 ${loading ? 'scale-105 opacity-50 grayscale' : ''}`}
                 />
-                <div className="absolute left-3 top-3 rounded-lg border-2 border-beam-black bg-white px-3 py-2 text-xs font-black text-beam-black shadow-crisp">
+                <div className="absolute left-3 top-3 rounded-lg border-2 border-beam-ink bg-white px-3 py-2 text-xs font-black text-beam-ink shadow-crisp">
                   {result ? t.aiResult : t.original}
                 </div>
-                <div className="absolute bottom-3 right-3 rounded-lg border-2 border-beam-black bg-beam-yellow px-3 py-2 text-[10px] font-black text-beam-black shadow-crisp">
+                <div className="absolute bottom-3 right-3 rounded-lg border-2 border-beam-ink bg-beam-butter px-3 py-2 text-[10px] font-black text-beam-ink shadow-crisp">
                   {t.styleNote}
                 </div>
               </>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-5 bg-[linear-gradient(135deg,#181818_0%,#101010_55%,#242018_100%)] px-8 text-center">
-                <div className="grid h-24 w-24 place-items-center rounded-lg border-4 border-beam-yellow bg-beam-yellow text-beam-black shadow-crisp">
+              <div className="flex h-full flex-col items-center justify-center gap-5 bg-[linear-gradient(135deg,#dff5c6_0%,#fff8dc_50%,#d7f0ff_100%)] px-8 text-center">
+                <div className="grid h-24 w-24 place-items-center rounded-lg border-4 border-beam-ink bg-beam-butter text-beam-ink shadow-crisp">
                   <Camera size={42} strokeWidth={3} />
                 </div>
-                <p className="text-balance text-lg font-black leading-snug text-beam-cream">
+                <p className="text-balance text-lg font-black leading-snug text-beam-ink">
                   {t.empty}
                 </p>
               </div>
             )}
 
             {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/[0.42] px-7 text-center backdrop-blur-[2px]">
-                <RefreshCw className="animate-spin text-beam-yellow" size={48} strokeWidth={3} />
-                <p className="mt-4 text-xl font-black text-white">{t.processing}</p>
-                <div className="mt-5 h-3 w-full overflow-hidden rounded-full border-2 border-white bg-black">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-beam-cream/[0.78] px-7 text-center backdrop-blur-[3px]">
+                <RefreshCw className="animate-spin text-beam-leaf" size={48} strokeWidth={3} />
+                <p className="mt-4 text-xl font-black text-beam-ink">{t.processing}</p>
+                <div className="mt-5 h-3 w-full overflow-hidden rounded-full border-2 border-beam-ink bg-white">
                   <div
-                    className="h-full rounded-full bg-beam-yellow transition-all duration-150"
+                    className="h-full rounded-full bg-beam-leaf transition-all duration-150"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="mt-3 text-sm font-black text-beam-yellow">
+                <p className="mt-3 text-sm font-black text-beam-ink">
                   {progressLabels[lang][activeStep]}
                 </p>
               </div>
             )}
 
             {notice && !loading && (
-              <div className="absolute bottom-3 left-3 max-w-[62%] rounded-lg border-2 border-beam-black bg-beam-mint px-3 py-2 text-xs font-black text-beam-black shadow-crisp">
+              <div className="absolute bottom-3 left-3 max-w-[56%] rounded-lg border-2 border-beam-ink bg-beam-mint px-3 py-2 text-xs font-black leading-snug text-beam-ink shadow-crisp">
                 {notice}
               </div>
             )}
@@ -326,8 +326,8 @@ export default function App() {
                 key={label}
                 className={`rounded-lg border-2 px-2 py-2 text-center text-[11px] font-black leading-tight ${
                   progress > index * 34
-                    ? 'border-beam-yellow bg-beam-yellow text-beam-black'
-                    : 'border-white/20 bg-white/[0.07] text-white/[0.45]'
+                    ? 'border-beam-ink bg-beam-meadow text-beam-ink shadow-soft'
+                    : 'border-beam-ink/25 bg-white/70 text-beam-ink/45'
                 }`}
               >
                 {label}
@@ -341,7 +341,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex h-[60px] w-full items-center justify-center gap-3 rounded-lg border-2 border-white bg-white text-lg font-black text-beam-black shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-[60px] w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-white text-lg font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   <Camera size={22} strokeWidth={3} />
                   {t.takePhoto}
@@ -349,7 +349,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="flex h-14 min-h-[56px] w-full items-center justify-center gap-3 rounded-lg border-2 border-white bg-beam-pink text-base font-black text-white shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-14 min-h-[56px] w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-beam-sky text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   <ImagePlus size={21} strokeWidth={3} />
                   {t.uploadPhoto}
@@ -360,7 +360,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={retry}
-                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-white bg-zinc-900 text-base font-black text-white shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   <RefreshCw size={19} strokeWidth={3} />
                   {t.retry}
@@ -368,7 +368,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={downloadResult}
-                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-white bg-white text-base font-black text-beam-black shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-leaf text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
                   <Download size={19} strokeWidth={3} />
                   {t.download}
@@ -379,7 +379,7 @@ export default function App() {
                 type="button"
                 onClick={applyBaldBeam}
                 disabled={loading}
-                className="beam-button flex h-16 w-full items-center justify-center gap-3 rounded-lg border-2 border-white bg-beam-yellow text-lg font-black text-beam-black shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70"
+                className="beam-button flex h-16 w-full items-center justify-center gap-3 rounded-lg border-2 border-beam-ink bg-beam-butter text-lg font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70"
               >
                 <Zap size={22} fill="currentColor" strokeWidth={3} />
                 {t.transform}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Jua&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,7 +10,7 @@
 
 html {
   min-width: 320px;
-  background: #f3efe7;
+  background: #f6efd9;
 }
 
 body {
@@ -26,6 +26,7 @@ body {
     'Apple SD Gothic Neo',
     'Noto Sans KR',
     sans-serif;
+  color: #4b3b2a;
 }
 
 button {
@@ -35,67 +36,48 @@ button {
 .hand-logo-wrap {
   position: relative;
   display: inline-block;
-  min-width: 174px;
-  padding: 2px 2px 14px;
+  min-width: 214px;
+  padding: 4px 4px 12px;
 }
 
 .hand-logo {
-  display: flex;
-  align-items: baseline;
-  gap: 0.01em;
-  color: #ffe45e;
+  display: block;
+  color: #fff8dc;
   font-family:
-    'Gaegu',
-    'Nanum Pen Script',
-    'Nanum Brush Script',
+    'Bagel Fat One',
+    'Jua',
     'Apple SD Gothic Neo',
-    cursive;
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 0.85;
+    sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 0.95;
   letter-spacing: 0;
   text-shadow:
-    2px 2px 0 #ff6ba8,
-    4px 4px 0 #62f2c8,
-    -1px -1px 0 #101010,
-    1px -1px 0 #101010,
-    -1px 1px 0 #101010,
-    1px 1px 0 #101010;
+    0 3px 0 #8bd867,
+    3px 5px 0 #4b3b2a,
+    -1px -1px 0 #4b3b2a,
+    1px -1px 0 #4b3b2a,
+    -1px 1px 0 #4b3b2a,
+    1px 1px 0 #4b3b2a;
 }
 
 .hand-logo span {
-  display: inline-block;
-}
-
-.hand-logo span:nth-child(1) {
-  transform: rotate(-7deg) translateY(1px);
-}
-
-.hand-logo span:nth-child(2) {
-  transform: rotate(4deg) translateY(-2px);
-}
-
-.hand-logo span:nth-child(3) {
-  transform: rotate(-3deg) translateY(2px);
-}
-
-.hand-logo span:nth-child(4) {
-  transform: rotate(6deg) translateY(-1px);
+  display: inline;
 }
 
 .hand-logo-doodle {
   position: absolute;
   left: 2px;
   bottom: 0;
-  width: 172px;
-  height: 34px;
+  width: 208px;
+  height: 24px;
   overflow: visible;
   fill: none;
-  stroke: #fff8df;
+  stroke: #ffb6a3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 5;
-  filter: drop-shadow(2px 2px 0 #ff6ba8);
+  stroke-width: 6;
+  filter: drop-shadow(2px 2px 0 #4b3b2a);
 }
 
 .beam-button {
@@ -115,14 +97,14 @@ button {
 
 @media (max-width: 360px) {
   .hand-logo-wrap {
-    min-width: 154px;
+    min-width: 188px;
   }
 
   .hand-logo {
-    font-size: 42px;
+    font-size: 36px;
   }
 
   .hand-logo-doodle {
-    width: 154px;
+    width: 184px;
   }
 }
