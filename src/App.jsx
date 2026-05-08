@@ -58,15 +58,9 @@ const progressLabels = {
 
 function HandwrittenLogo() {
   return (
-    <div className="hand-logo-wrap" aria-label="대머리빔">
-      <div className="hand-logo" aria-hidden="true">
-        <span>대머리빔</span>
-      </div>
-      <svg className="hand-logo-doodle" viewBox="0 0 170 34" aria-hidden="true">
-        <path d="M9 20 C43 31, 96 27, 161 18" />
-        <path d="M134 10 C141 2, 153 4, 158 13 C149 17, 140 17, 134 10" />
-      </svg>
-    </div>
+    <h1 className="bb-logo" aria-label="대머리빔">
+      대머리빔
+    </h1>
   );
 }
 
@@ -104,7 +98,7 @@ function resizeImageFile(file) {
       const img = new Image();
 
       img.onload = () => {
-        const maxSide = 1280;
+        const maxSide = 960;
         const ratio = Math.min(maxSide / img.width, maxSide / img.height, 1);
         const width = Math.round(img.width * ratio);
         const height = Math.round(img.height * ratio);
@@ -119,7 +113,7 @@ function resizeImageFile(file) {
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.9));
+        resolve(canvas.toDataURL('image/jpeg', 0.84));
       };
 
       img.onerror = () => resolve(src);
@@ -136,6 +130,7 @@ async function requestBaldPortrait(image) {
     },
     body: JSON.stringify({
       image,
+      imageData: image,
       prompt: buildBaldBeamPrompt(),
       negativePrompt:
         'cartoon, illustration, anime, yellow beam, head sticker, fake shine overlay, original hair, wig, hat, cap, extra person, text, watermark',
@@ -144,13 +139,34 @@ async function requestBaldPortrait(image) {
     })
   });
 
-  const data = await response.json().catch(() => ({}));
+  const responseText = await response.text();
+  const data = responseText
+    ? (() => {
+        try {
+          return JSON.parse(responseText);
+        } catch (error) {
+          console.error('Bald Beam API returned non-JSON response', {
+            status: response.status,
+            body: responseText
+          });
+          return {};
+        }
+      })()
+    : {};
 
   if (!response.ok) {
+    console.error('Bald Beam API failed', {
+      status: response.status,
+      body: responseText
+    });
     throw new Error(data.error || 'AI generation failed');
   }
 
   if (!data.imageUrl && !data.imageDataUrl) {
+    console.error('Bald Beam API returned no image', {
+      status: response.status,
+      body: responseText
+    });
     throw new Error('AI response did not include an image');
   }
 
@@ -213,6 +229,7 @@ export default function App() {
       setProgress(100);
       setNotice(t.complete);
     } catch (error) {
+      console.error('AI generation request failed', error);
       setNotice(t.failed);
       setProgress(0);
     } finally {
@@ -246,102 +263,93 @@ export default function App() {
   const activeStep = Math.min(Math.floor(progress / 34), 2);
 
   return (
-    <div className="min-h-[100dvh] bg-[#f6efd9] text-beam-ink sm:flex sm:items-center sm:justify-center">
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-beam-paper px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-[calc(env(safe-area-inset-top)+12px)] shadow-2xl sm:min-h-[760px] sm:rounded-[28px] sm:border-[3px] sm:border-beam-ink">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_82%_18%,rgba(255,182,163,0.42),transparent_28%),radial-gradient(circle_at_16%_4%,rgba(155,220,248,0.55),transparent_28%),linear-gradient(180deg,#e4f7c8_0%,#fffdf2_84%)]" />
-        <div className="pointer-events-none absolute -left-14 top-28 h-28 w-28 rounded-full bg-beam-meadow/55" />
-        <div className="pointer-events-none absolute -right-14 bottom-28 h-32 w-32 rounded-full bg-beam-sky/30" />
+    <div className="bb-page">
+      <div className="bb-phone">
+        <div className="bb-bg bb-bg-a" />
+        <div className="bb-bg bb-bg-b" />
 
-        <header className="relative z-10 flex items-start justify-between gap-2">
-          <div className="min-w-0">
+        <header className="bb-header">
+          <div className="bb-title-block">
             <HandwrittenLogo />
-            <p className="mt-1 max-w-[230px] text-[12px] font-black leading-snug text-beam-ink/65">
-              {t.subtitle}
-            </p>
+            <p className="bb-subtitle">{t.subtitle}</p>
           </div>
 
           <button
             type="button"
             onClick={() => setLang((value) => (value === 'ko' ? 'en' : 'ko'))}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border-2 border-beam-ink bg-white px-3 text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+            className="bb-lang"
           >
             <Globe2 size={17} strokeWidth={3} />
             {t.lang}
           </button>
         </header>
 
-        <main className="relative z-10 mt-4 flex min-h-0 flex-1 flex-col">
-          <section className="relative mx-auto aspect-[7/9] h-[min(46dvh,390px)] min-h-[292px] max-h-[390px] w-auto max-w-full overflow-hidden rounded-lg border-[3px] border-beam-ink bg-beam-cream shadow-beam">
+        <main className="bb-main">
+          <section className="bb-preview">
             {currentImage ? (
               <>
                 <img
                   src={currentImage}
                   alt="Bald Beam preview"
-                  className={`h-full w-full object-cover transition duration-500 ${loading ? 'scale-105 opacity-50 grayscale' : ''}`}
+                  className={`bb-photo ${loading ? 'is-loading' : ''}`}
                 />
-                <div className="absolute left-2 top-2 rounded-md border-2 border-beam-ink bg-white px-2.5 py-1.5 text-[11px] font-black text-beam-ink shadow-crisp">
+                <div className="bb-badge bb-badge-top">
                   {result ? t.aiResult : t.original}
                 </div>
-                <div className="absolute bottom-2 right-2 rounded-md border-2 border-beam-ink bg-beam-butter px-2.5 py-1.5 text-[9px] font-black text-beam-ink shadow-crisp">
+                <div className="bb-badge bb-badge-style">
                   {t.styleNote}
                 </div>
               </>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#dff5c6_0%,#fff8dc_50%,#d7f0ff_100%)] px-7 text-center">
-                <div className="grid h-16 w-16 place-items-center rounded-lg border-[3px] border-beam-ink bg-beam-butter text-beam-ink shadow-crisp">
+              <div className="bb-empty">
+                <div className="bb-camera-mark">
                   <Camera size={30} strokeWidth={3} />
                 </div>
-                <p className="text-balance text-sm font-black leading-snug text-beam-ink">
-                  {t.empty}
-                </p>
+                <p>{t.empty}</p>
               </div>
             )}
 
             {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-beam-cream/[0.78] px-7 text-center backdrop-blur-[3px]">
-                <RefreshCw className="animate-spin text-beam-leaf" size={38} strokeWidth={3} />
-                <p className="mt-3 text-base font-black text-beam-ink">{t.processing}</p>
-                <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full border-2 border-beam-ink bg-white">
+              <div className="bb-loading">
+                <RefreshCw className="animate-spin" size={34} strokeWidth={3} />
+                <p>{t.processing}</p>
+                <div className="bb-progress">
                   <div
-                    className="h-full rounded-full bg-beam-leaf transition-all duration-150"
+                    className="bb-progress-fill"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs font-black text-beam-ink">
+                <span>
                   {progressLabels[lang][activeStep]}
-                </p>
+                </span>
               </div>
             )}
 
             {notice && !loading && (
-              <div className="absolute bottom-2 left-2 max-w-[62%] rounded-md border-2 border-beam-ink bg-beam-mint px-2.5 py-1.5 text-[11px] font-black leading-snug text-beam-ink shadow-crisp">
+              <div className="bb-notice">
                 {notice}
               </div>
             )}
           </section>
 
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
+          <div className="bb-steps">
             {progressLabels[lang].map((label, index) => (
               <div
                 key={label}
-                className={`rounded-md border-2 px-1.5 py-1.5 text-center text-[10px] font-black leading-tight ${
-                  progress > index * 34
-                    ? 'border-beam-ink bg-beam-meadow text-beam-ink shadow-soft'
-                    : 'border-beam-ink/25 bg-white/70 text-beam-ink/45'
-                }`}
+                className={`bb-step ${progress > index * 34 ? 'is-active' : ''}`}
               >
                 {label}
               </div>
             ))}
           </div>
 
-          <div className="mt-auto pt-3">
+          <div className="bb-actions">
             {!image ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="bb-upload-actions">
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="bb-button bb-button-white"
                 >
                   <Camera size={18} strokeWidth={3} />
                   {t.takePhoto}
@@ -349,18 +357,18 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-sky text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="bb-button bb-button-sky"
                 >
                   <ImagePlus size={18} strokeWidth={3} />
                   {t.uploadPhoto}
                 </button>
               </div>
             ) : result ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="bb-upload-actions">
                 <button
                   type="button"
                   onClick={retry}
-                  className="flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-white text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="bb-button bb-button-white"
                 >
                   <RefreshCw size={17} strokeWidth={3} />
                   {t.retry}
@@ -368,7 +376,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={downloadResult}
-                  className="flex h-12 items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-leaf text-sm font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none"
+                  className="bb-button bb-button-leaf"
                 >
                   <Download size={17} strokeWidth={3} />
                   {t.download}
@@ -379,7 +387,7 @@ export default function App() {
                 type="button"
                 onClick={applyBaldBeam}
                 disabled={loading}
-                className="beam-button flex h-[54px] w-full items-center justify-center gap-2 rounded-lg border-2 border-beam-ink bg-beam-butter text-base font-black text-beam-ink shadow-crisp transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-70"
+                className="bb-button bb-button-primary beam-button"
               >
                 <Zap size={19} fill="currentColor" strokeWidth={3} />
                 {t.transform}

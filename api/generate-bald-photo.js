@@ -20,7 +20,20 @@ function findImageUrl(data) {
 }
 
 function dataUrlToBase64(dataUrl) {
-  return dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+  const value = String(dataUrl || '');
+  return value.includes(',') ? value.split(',')[1] : value;
+}
+
+function parseJsonText(text) {
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { raw: text };
+  }
 }
 
 function parseTargetSize(size) {
@@ -35,7 +48,7 @@ function parseTargetSize(size) {
 }
 
 async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) {
-  const token = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN;
+  const token = process.env.HF_TOKEN;
   const model = process.env.HF_IMAGE_MODEL || DEFAULT_HF_MODEL;
   const provider = process.env.HF_PROVIDER;
 
@@ -87,8 +100,19 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
     };
   }
 
-  const data = await hfResponse.json().catch(() => ({}));
+  const responseText = await hfResponse.text();
+  const data = parseJsonText(responseText);
   const imageUrl = findImageUrl(data);
+
+  if (!hfResponse.ok || !imageUrl) {
+    console.error('Hugging Face image generation failed', {
+      status: hfResponse.status,
+      contentType,
+      model,
+      provider,
+      body: responseText.slice(0, 2000)
+    });
+  }
 
   return {
     ok: hfResponse.ok && Boolean(imageUrl),
@@ -145,8 +169,17 @@ async function callCustomEndpoint({ image, prompt, negativePrompt, size, style, 
     };
   }
 
-  const data = await aiResponse.json().catch(() => ({}));
+  const responseText = await aiResponse.text();
+  const data = parseJsonText(responseText);
   const imageUrl = findImageUrl(data);
+
+  if (!aiResponse.ok || !imageUrl) {
+    console.error('Custom image generation failed', {
+      status: aiResponse.status,
+      contentType,
+      body: responseText.slice(0, 2000)
+    });
+  }
 
   return {
     ok: aiResponse.ok && Boolean(imageUrl),
@@ -163,9 +196,16 @@ export default async function handler(request, response) {
     return;
   }
 
-  const { image, prompt, negativePrompt, size, style } = request.body || {};
+  const body = typeof request.body === 'string' ? parseJsonText(request.body) : request.body || {};
+  const image = body.image || body.imageData || body.imageDataUrl;
+  const { prompt, negativePrompt, size, style } = body;
 
   if (!image || !prompt) {
+    console.error('Bald Beam request missing required body fields', {
+      hasImage: Boolean(image),
+      hasPrompt: Boolean(prompt),
+      bodyKeys: Object.keys(body)
+    });
     response.status(400).json({ error: 'Image and prompt are required' });
     return;
   }
@@ -182,9 +222,16 @@ export default async function handler(request, response) {
       style,
       signal: controller.signal
     };
-    const aiResult = (await callCustomEndpoint(payload)) || (await callHuggingFace(payload));
+    const aiResult = process.env.HF_TOKEN
+      ? (await callHuggingFace(payload)) || (await callCustomEndpoint(payload))
+      : (await callCustomEndpoint(payload)) || (await callHuggingFace(payload));
 
     if (!aiResult) {
+      console.error('Bald Beam server is missing AI configuration', {
+        hasHFToken: Boolean(process.env.HF_TOKEN),
+        hasHFModel: Boolean(process.env.HF_IMAGE_MODEL),
+        hasCustomEndpoint: Boolean(process.env.BALD_BEAM_AI_ENDPOINT)
+      });
       response.status(501).json({
         error: 'Missing server-side HF_TOKEN.',
         prompt,
@@ -195,12 +242,21 @@ export default async function handler(request, response) {
     }
 
     if (!aiResult.ok) {
+      console.error('Bald Beam AI provider returned an error', {
+        status: aiResult.status,
+        payload: aiResult.payload
+      });
       response.status(aiResult.status).json(aiResult.payload);
       return;
     }
 
     response.status(200).json(aiResult.payload);
   } catch (error) {
+    console.error('Bald Beam API crashed', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     response.status(504).json({
       error: error.name === 'AbortError' ? 'AI generation timed out' : error.message
     });
