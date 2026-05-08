@@ -9,13 +9,6 @@ import {
   Zap
 } from 'lucide-react';
 
-const AI_OUTPUT_SIZE = '1024x1316';
-const AI_STYLE_PRESET = {
-  scene: 'American teen-movie yearbook inspired ID portrait, blue mottled studio backdrop',
-  wardrobe: 'clean high-teen yearbook styling, collared shirt, school tie or varsity cardigan',
-  edit: 'realistic completely bald head, preserve the person identity, apparent age, face shape, skin tone, expression, and camera angle'
-};
-
 const translations = {
   ko: {
     subtitle: '셀카 한 장을 하이틴 대머리 증명사진으로',
@@ -62,17 +55,6 @@ function HandwrittenLogo() {
       대머리빔
     </h1>
   );
-}
-
-function buildBaldBeamPrompt() {
-  return [
-    'Create a photorealistic AI-edited portrait from the uploaded person photo.',
-    AI_STYLE_PRESET.edit,
-    AI_STYLE_PRESET.scene,
-    AI_STYLE_PRESET.wardrobe,
-    'Portrait crop for ID photo, vertical 7:9 ratio, centered face and shoulders, direct camera gaze, realistic studio lighting.',
-    'No cartoon overlay, no illustrated beam, no fake sticker, no text, no watermark, no extra people, no hat, no wig, no visible hair.'
-  ].join(' ');
 }
 
 function resizeImageFile(file) {
@@ -129,13 +111,7 @@ async function requestBaldPortrait(image) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      image,
-      imageData: image,
-      prompt: buildBaldBeamPrompt(),
-      negativePrompt:
-        'cartoon, illustration, anime, yellow beam, head sticker, fake shine overlay, original hair, wig, hat, cap, extra person, text, watermark',
-      size: AI_OUTPUT_SIZE,
-      style: AI_STYLE_PRESET
+      imageDataUrl: image
     })
   });
 

@@ -1,6 +1,17 @@
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_HF_MODEL = 'black-forest-labs/FLUX.1-Kontext-dev';
+const DEFAULT_OUTPUT_SIZE = '1024x1316';
 const HF_IMAGE_TO_IMAGE_BASE_URL = 'https://api-inference.huggingface.co/models';
+const DEFAULT_PROMPT = [
+  'Create a photorealistic AI-edited portrait from the uploaded person photo.',
+  'Realistic completely bald head, preserve the person identity, apparent age, face shape, skin tone, expression, and camera angle.',
+  'American teen-movie yearbook inspired ID portrait, blue mottled studio backdrop.',
+  'Clean high-teen yearbook styling, collared shirt, school tie or varsity cardigan.',
+  'Portrait crop for ID photo, vertical 7:9 ratio, centered face and shoulders, direct camera gaze, realistic studio lighting.',
+  'No cartoon overlay, no illustrated beam, no fake sticker, no text, no watermark, no extra people, no hat, no wig, no visible hair.'
+].join(' ');
+const DEFAULT_NEGATIVE_PROMPT =
+  'cartoon, illustration, anime, yellow beam, head sticker, fake shine overlay, original hair, wig, hat, cap, extra person, text, watermark';
 
 function findImageUrl(data) {
   if (!data || typeof data !== 'object') {
@@ -53,6 +64,9 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
   const provider = process.env.HF_PROVIDER;
 
   if (!token) {
+    console.error('Missing HF_TOKEN', {
+      HF_IMAGE_MODEL: model
+    });
     return null;
   }
 
@@ -83,6 +97,13 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
   });
 
   const contentType = hfResponse.headers.get('content-type') || '';
+  const logBase = {
+    HF_IMAGE_MODEL: model,
+    'response.status': hfResponse.status,
+    'response.statusText': hfResponse.statusText,
+    contentType,
+    'response body text': ''
+  };
 
   if (contentType.startsWith('image/')) {
     const mimeType = contentType.split(';')[0];
@@ -106,11 +127,9 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
 
   if (!hfResponse.ok || !imageUrl) {
     console.error('Hugging Face image generation failed', {
-      status: hfResponse.status,
-      contentType,
-      model,
+      ...logBase,
       provider,
-      body: responseText.slice(0, 2000)
+      'response body text': responseText.slice(0, 4000)
     });
   }
 
@@ -128,68 +147,6 @@ async function callHuggingFace({ image, prompt, negativePrompt, size, signal }) 
   };
 }
 
-async function callCustomEndpoint({ image, prompt, negativePrompt, size, style, signal }) {
-  const endpoint = process.env.BALD_BEAM_AI_ENDPOINT;
-  const token = process.env.BALD_BEAM_AI_TOKEN;
-
-  if (!endpoint) {
-    return null;
-  }
-
-  const aiResponse = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify({
-      image,
-      prompt,
-      negativePrompt,
-      size,
-      style
-    }),
-    signal
-  });
-
-  const contentType = aiResponse.headers.get('content-type') || '';
-
-  if (contentType.startsWith('image/')) {
-    const mimeType = contentType.split(';')[0];
-    const arrayBuffer = await aiResponse.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    return {
-      ok: aiResponse.ok,
-      status: aiResponse.status,
-      payload: {
-        imageDataUrl: `data:${mimeType};base64,${base64}`,
-        provider: 'custom'
-      }
-    };
-  }
-
-  const responseText = await aiResponse.text();
-  const data = parseJsonText(responseText);
-  const imageUrl = findImageUrl(data);
-
-  if (!aiResponse.ok || !imageUrl) {
-    console.error('Custom image generation failed', {
-      status: aiResponse.status,
-      contentType,
-      body: responseText.slice(0, 2000)
-    });
-  }
-
-  return {
-    ok: aiResponse.ok && Boolean(imageUrl),
-    status: aiResponse.ok ? 502 : aiResponse.status,
-    payload: imageUrl
-      ? { imageUrl, provider: 'custom' }
-      : { error: data.error || data.message || 'AI provider did not return an image' }
-  };
-}
-
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
     response.status(405).json({ error: 'POST only' });
@@ -197,16 +154,26 @@ export default async function handler(request, response) {
   }
 
   const body = typeof request.body === 'string' ? parseJsonText(request.body) : request.body || {};
-  const image = body.image || body.imageData || body.imageDataUrl;
-  const { prompt, negativePrompt, size, style } = body;
+  const image = body.imageDataUrl || body.image || body.imageData;
+  const prompt = body.prompt || DEFAULT_PROMPT;
+  const negativePrompt = body.negativePrompt || DEFAULT_NEGATIVE_PROMPT;
+  const size = body.size || DEFAULT_OUTPUT_SIZE;
 
-  if (!image || !prompt) {
+  if (!image) {
     console.error('Bald Beam request missing required body fields', {
       hasImage: Boolean(image),
-      hasPrompt: Boolean(prompt),
       bodyKeys: Object.keys(body)
     });
-    response.status(400).json({ error: 'Image and prompt are required' });
+    response.status(400).json({ error: 'imageDataUrl is required' });
+    return;
+  }
+
+  if (!process.env.HF_TOKEN) {
+    const model = process.env.HF_IMAGE_MODEL || DEFAULT_HF_MODEL;
+    console.error('Missing HF_TOKEN', {
+      HF_IMAGE_MODEL: model
+    });
+    response.status(500).json({ error: 'Missing HF_TOKEN' });
     return;
   }
 
@@ -219,24 +186,19 @@ export default async function handler(request, response) {
       prompt,
       negativePrompt,
       size,
-      style,
       signal: controller.signal
     };
-    const aiResult = process.env.HF_TOKEN
-      ? (await callHuggingFace(payload)) || (await callCustomEndpoint(payload))
-      : (await callCustomEndpoint(payload)) || (await callHuggingFace(payload));
+    const aiResult = await callHuggingFace(payload);
 
     if (!aiResult) {
       console.error('Bald Beam server is missing AI configuration', {
         hasHFToken: Boolean(process.env.HF_TOKEN),
-        hasHFModel: Boolean(process.env.HF_IMAGE_MODEL),
-        hasCustomEndpoint: Boolean(process.env.BALD_BEAM_AI_ENDPOINT)
+        hasHFModel: Boolean(process.env.HF_IMAGE_MODEL)
       });
       response.status(501).json({
         error: 'Missing server-side HF_TOKEN.',
         prompt,
-        size,
-        style
+        size
       });
       return;
     }

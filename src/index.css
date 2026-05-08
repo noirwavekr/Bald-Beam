@@ -165,10 +165,11 @@ button {
 
 .bb-preview {
   position: relative;
-  width: min(100%, calc((100dvh - 226px) * 7 / 9));
-  height: min(45dvh, calc(100dvh - 226px), 380px);
-  min-height: 276px;
-  max-height: 380px;
+  aspect-ratio: 7 / 9;
+  width: min(100%, 315px, calc((100dvh - 230px) * 7 / 9));
+  min-width: 0;
+  height: auto;
+  max-height: 405px;
   margin: 0 auto;
   overflow: hidden;
   border: 3px solid #4b3b2a;
@@ -182,6 +183,7 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 38%;
   transition: transform 0.45s ease, opacity 0.45s ease, filter 0.45s ease;
 }
 
@@ -447,8 +449,8 @@ button {
   }
 
   .bb-preview {
-    height: min(43dvh, calc(100dvh - 216px), 350px);
-    min-height: 252px;
+    width: min(100%, 278px, calc((100dvh - 218px) * 7 / 9));
+    max-height: 358px;
   }
 
   .bb-step {
