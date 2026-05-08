@@ -135,6 +135,7 @@ async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
       ok: true,
       status: 200,
       payload: {
+        success: true,
         imageDataUrl: await blobToDataUrl(output),
         provider: 'huggingface',
         model
@@ -164,6 +165,7 @@ async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
       ok: false,
       status: status || 502,
       payload: {
+        success: false,
         error: 'Hugging Face image-to-image request failed.',
         provider: 'huggingface',
         model
@@ -174,7 +176,7 @@ async function callHuggingFace({ image, prompt, negativePrompt, signal }) {
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
-    response.status(405).json({ error: 'POST only' });
+    response.status(405).json({ success: false, error: 'POST only' });
     return;
   }
 
@@ -189,7 +191,7 @@ export default async function handler(request, response) {
       hasImage: Boolean(image),
       bodyKeys: Object.keys(body)
     });
-    response.status(400).json({ error: 'imageDataUrl is required' });
+    response.status(400).json({ success: false, error: 'imageDataUrl is required' });
     return;
   }
 
@@ -198,7 +200,7 @@ export default async function handler(request, response) {
     console.error('Missing HF_TOKEN', {
       HF_IMAGE_MODEL: model
     });
-    response.status(500).json({ error: 'Missing HF_TOKEN' });
+    response.status(500).json({ success: false, error: 'Missing HF_TOKEN' });
     return;
   }
 
@@ -221,6 +223,7 @@ export default async function handler(request, response) {
         hasHFModel: Boolean(process.env.HF_IMAGE_MODEL)
       });
       response.status(501).json({
+        success: false,
         error: 'Missing server-side HF_TOKEN.',
         prompt,
         size
@@ -233,12 +236,7 @@ export default async function handler(request, response) {
         status: aiResult.status,
         payload: aiResult.payload
       });
-      response.status(200).json({
-        imageDataUrl: image,
-        provider: 'demo-fallback',
-        model: aiResult.payload?.model || resolveHuggingFaceModel(),
-        demo: true
-      });
+      response.status(500).json({ success: false, error: 'AI generation failed' });
       return;
     }
 
@@ -249,9 +247,7 @@ export default async function handler(request, response) {
       message: error.message,
       stack: error.stack
     });
-    response.status(504).json({
-      error: error.name === 'AbortError' ? 'AI generation timed out' : error.message
-    });
+    response.status(500).json({ success: false, error: 'AI generation failed' });
   } finally {
     clearTimeout(timeout);
   }

@@ -138,7 +138,7 @@ async function requestBaldPortrait(image) {
     throw new Error(data.error || 'AI generation failed');
   }
 
-  if (!data.imageUrl && !data.imageDataUrl) {
+  if (data.success !== true || !data.imageDataUrl) {
     console.error('Bald Beam API returned no image', {
       status: response.status,
       body: responseText
@@ -146,7 +146,7 @@ async function requestBaldPortrait(image) {
     throw new Error('AI response did not include an image');
   }
 
-  return data.imageDataUrl || data.imageUrl;
+  return data.imageDataUrl;
 }
 
 export default function App() {
@@ -206,6 +206,7 @@ export default function App() {
       setNotice(t.complete);
     } catch (error) {
       console.error('AI generation request failed', error);
+      setResult(null);
       setNotice(t.failed);
       setProgress(0);
     } finally {
